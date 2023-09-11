@@ -1,0 +1,85 @@
+version: '3'
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.16.2
+    platform: linux/arm64
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=true
+      - xpack.security.authc.accept_default_password=false
+      - xpack.security.authc.api_key.enabled=true
+      - ELASTIC_PASSWORD=test123
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+      - ./elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+    ports:
+      - "9200:9200"
+    networks:
+      - elk-network
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:7.16.2
+    platform: linux/arm64
+    container_name: logstash
+    volumes:
+      - ./logstash/config:/usr/share/logstash/config
+    ports:
+      - "5000:5000"
+      - "5044:5044"
+    networks:
+      - elk-network
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.16.2
+    platform: linux/arm64
+    container_name: kibana
+    ports:
+      - "5601:5601"
+    networks:
+      - elk-network
+    volumes:
+      - ./kibana/config/:/usr/share/kibana/config
+    environment:
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - xpack.security.enabled=true
+      - xpack.security.authc.providers.basic.basic_internal.enabled=false
+    depends_on:
+      - elasticsearch
+    links:
+      - elasticsearch
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:7.16.2
+    platform: linux/arm64
+    container_name: filebeat
+    volumes:
+      - ./suricata/logs/:/var/log/suricata/
+      - ./filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml
+    depends_on:
+      - elasticsearch
+    networks:
+      - elk-network
+  
+  ubuntu:
+    image: hanch7274/ubuntu-suricata:1.0.1
+    container_name: ubuntu-suricata
+    volumes:
+      - /Users/chang2/Desktop/clone_honey/suricata/logs:/var/log/suricata
+      - /Users/chang2/Desktop/clone_honey/suricata/rules:/etc/suricata/rules
+    command: "suricata -c /etc/suricata/suricata.yaml -i eth0; service apache2 start"
+    ports:
+      - 80:80
+    privileged: true
+    networks:
+      - elk-network
+    depends_on:
+      - logstash
+      
+networks:
+  elk-network:
+
+volumes:
+  elasticsearch-data:
+

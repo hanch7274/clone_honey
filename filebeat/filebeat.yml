@@ -1,0 +1,21 @@
+filebeat.config.modules.path: ${path.config}/modules.d/*.yml
+
+filebeat.config.modules:
+  - module: suricata
+    eve:
+      enabled: true
+    var.paths: ["/var/log/suricata/eve.json"]
+
+#filebeat.inputs:
+#  - type: log
+#    enabled: true
+#    paths:
+#      - /var/log/suricata/*.log
+
+output.elasticsearch:
+  hosts: ["elasticsearch:9200"]
+  username: "elastic"
+  password: "test123"
+
+setup.kibana:
+  host: "kibana:5601"
